@@ -9,8 +9,9 @@ all: bundle minify
 bundle:
 	@@echo "Bundling..."
 	@@touch ${JS_OUTPUT}
-	@@rm ${JS_OUTPUT}
-	@@cat ${JS_FILES} >> ${JS_OUTPUT}
+	@@echo "Create output file"
+	@@cat ${JS_FILE} >> ${JS_OUTPUT}
+	@@echo "Merge JS file into output file"
 	@@cat ${JS_OUTPUT} | sed "s/@VERSION/${VERSION}/" > "${JS_OUTPUT}.tmp"
 	@@mv "${JS_OUTPUT}.tmp" ${JS_OUTPUT}
 
