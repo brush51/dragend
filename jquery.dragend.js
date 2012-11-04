@@ -119,18 +119,15 @@
 
       if (settings.direction === "horizontal") {
         width = width - parseInt(settings.scribe, 10);
+        scrollBorder.x = width * page;
       } else {
         height = height - parseInt(settings.scribe, 10);
+        scrollBorder.y = height * page;
       }
 
       pageDimentions = {
         "width" : width,
         "height": height
-      };
-
-      scrollBorder = {
-        x: width * page,
-        y: height * page
       };
 
     },
@@ -271,11 +268,14 @@
     // ### Size pages
 
     sizePages = function() {
-      var pageCssProperties = $.extend({}, containerStyles),
+      var pageCssProperties = {},
           direction = {
             "horizontal": function() {
               $.extend(pageCssProperties, {
-                "float": "left"
+                "float"     : "left",
+                "overflow-x": "scroll",
+                "overflow-y": "hidden",
+                "padding"   : 0
               });
 
               pageContainer.css({
