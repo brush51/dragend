@@ -77,13 +77,13 @@
       "pageElements"      : "li",
       "direction"         : "horizontal",
       "minTouchDistance"  : "40",
+      "minScrollDistance" : "500",
       "keyboardNavigation": false,
       "scribe"            : 0,
       "duration"          : 300,
       "hammerSettings"    : {
         "drag_min_distance": 0,
         "css_hacks"        : false,
-        "swipe"            : false,
         "prevent_default"  : true
       }
     },
@@ -102,10 +102,10 @@
 
     Dragend = function( container, options ) {
 
-      this.settings      = $.extend({}, defaultSettings, options);
+      this.settings      = $.extend( {}, defaultSettings, options );
       this.container     = container;
-      this.pageContainer = container.find(this.settings.pageContainer);
-      this.pages         = container.find(this.settings.pageElements);
+      this.pageContainer = container.find( this.settings.pageContainer );
+      this.pages         = container.find( this.settings.pageElements );
       this.scrollBorder  = { x: 0, y: 0 };
       this.page          = 0;
       this.preventScroll = false;
@@ -116,33 +116,28 @@
 
       // Initialisation
 
-      this.container.css(containerStyles);
-      this.updateInstance(options);
+      this.container.css( containerStyles );
+      this.updateInstance( options );
       this._observe();
-
-      return {
-        "swipe"         : this.swipe,
-        "updateInstance": this.updateInstance
-      };
 
     },
 
     withTranslateMethodes = {
       // ### Scroll translate
       //
-      // Animation lookup table when translate is supported
+      // Animation when translate is supported
       //
       // Takes:
       // x and y values to go with
 
-      _scroll: function(x, y) {
-        switch (this.settings.direction) {
+      _scroll: function( coordinates ) {
+        switch ( this.settings.direction ) {
           case "horizontal":
-            this.pageContainer.css("-webkit-transform", "translate3d(" + x + "px, 0, 0)");
+            this.pageContainer.css( "-webkit-transform", "translate3d(" + coordinates.x + "px, 0, 0)" );
             break;
 
           case "vertical":
-            this.pageContainer.css("-webkit-transform", "translate3d(0, " + y + "px, 0)");
+            this.pageContainer.css( "-webkit-transform", "translate3d(0, " + coordinates.y + "px, 0)" );
             break;
         }
       },
@@ -150,15 +145,20 @@
       // ### Animated scroll with translate support
 
       _animateScroll: function() {
-        this.activeElement = this.pages.eq(this.page);
+        this.activeElement = this.pages.eq( this.page );
 
-        this.pageContainer.css("-webkit-transition", "-webkit-transform " + this.settings.duration + "ms ease-out");
-        this._scroll(- this.scrollBorder.x, - this.scrollBorder.y);
+        this.pageContainer.css( "-webkit-transition", "-webkit-transform " + this.settings.duration + "ms ease-out" );
+        this._scroll({
+          x: - this.scrollBorder.x,
+          y: - this.scrollBorder.y
+        });
 
-        window.setTimeout(function() {
-          this._onSwipeEnd();
-          this.pageContainer.css("-webkit-transition", "-webkit-transform 0");
-        }.bind(this), this.settings.duration);
+        window.setTimeout( $.proxy( this.afterScroll, this ), this.settings.duration );
+      },
+
+      afterScroll: function() {
+        this._onSwipeEnd();
+        this.pageContainer.css( "-webkit-transition", "-webkit-transform 0" );
       }
     },
 
@@ -170,14 +170,14 @@
       // Takes:
       // x and y values to go with
 
-      _scrollFallback: function(x, y) {
-        switch (this.settings.direction) {
+      _scrollFallback: function( x, y ) {
+        switch ( this.settings.direction ) {
           case "horizontal":
-            this.pageContainer.css({ "margin-left": x });
+            this.pageContainer.css( { "margin-left": x } );
             break;
 
           case "vertical":
-            this.pageContainer.css({"margin-top": y });
+            this.pageContainer.css( { "margin-top": y } );
             break;
         }
       },
@@ -185,7 +185,7 @@
       // ### Animated scroll without translate support
 
       _animateScrollFallback: function() {
-        this.activeElement = this.pages.eq(this.page);
+        this.activeElement = this.pages.eq( this.page );
 
         this.pageContainer.animate({
           "margin-left": - this.scrollBorder.x,
@@ -195,13 +195,13 @@
     };
 
   // ### Check translate support
-  (function checkTranslateSupport() {
-    if ("WebKitCSSMatrix" in window && "m11" in new WebKitCSSMatrix()) {
-      $.extend(Dragend.prototype, withTranslateMethodes);
+  ( function checkTranslateSupport() {
+    if ( "WebKitCSSMatrix" in window && "m11" in new WebKitCSSMatrix() ) {
+      $.extend( Dragend.prototype, withTranslateMethodes );
     } else {
-      $.extend(Dragend.prototype, withoutTranslateMethodes);
+      $.extend( Dragend.prototype, withoutTranslateMethodes );
     }
-  })();
+  } )();
 
 
   $.extend(Dragend.prototype, {
@@ -216,34 +216,47 @@
     // Takes:
     // Drag event
 
-    _overscroll: function(event) {
-      switch (event.direction) {
+    _overscroll: function( direction, x, y ) {
+      var coordinates = {
+        x: x,
+        y: y
+      };
+
+      switch ( direction ) {
 
         case "right":
           if ( !this.scrollBorder.x ) {
-            return ( event.distanceX - this.scrollBorder.x ) / 4;
+            Math.round( coordinates.x = (x - this.scrollBorder.x) / 5 );
+            return coordinates;
           }
           break;
 
         case "left":
-          if ((this.pages.length - 1) * this.pageDimentions.width <= this.scrollBorder.x) {
-            return - ((this.pages.length - 1) * this.pageDimentions.width) + event.distanceX / 4;
+          if ( (this.pages.length - 1) * this.pageDimentions.width <= this.scrollBorder.x ) {
+            coordinates.x = Math.round( - ((this.pages.length - 1) * this.pageDimentions.width) + x / 5 );
+            return coordinates;
           }
           break;
 
         case "down":
-          if (!this.scrollBorder.y) {
-            return (event.distanceY - this.scrollBorder.y) / 4;
+          if ( !this.scrollBorder.y ) {
+            coordinates.y = Math.round( (y - this.scrollBorder.y) / 5 );
+            return coordinates;
           }
           break;
 
         case "up":
-          if ((this.pages.length - 1) * this.pageDimentions.height <= this.scrollBorder.y) {
-            return - ((this.pages.length - 1) * this.pageDimentions.height) + event.distanceY / 4;
+          if ( (this.pages.length - 1) * this.pageDimentions.height <= this.scrollBorder.y ) {
+            coordinates.y = Math.round( - ((this.pages.length - 1) * this.pageDimentions.height) + y / 5 );
+            return coordinates;
           }
           break;
-
       }
+
+      return {
+        x: x - this.scrollBorder.x,
+        y: y - this.scrollBorder.y
+      };
     },
 
     // Observe
@@ -251,94 +264,96 @@
     // Sets the observers for drag, resize and key events
 
     _observe: function() {
-      this.container
-        .on("drag", this.settings.hammerSettings, this._onDrag.bind(this))
-        .on("dragend", this.settings.hammerSettings, this._ondragend.bind(this));
+      this.container.hammer()
+        .on( "drag", this.settings.hammerSettings, $.proxy( this._onDrag, this ) )
+        .on( "dragend", this.settings.hammerSettings, $.proxy( this._onDragend, this ) );
 
-      WINDOW.on("resize", this._sizePages);
+      WINDOW.on( "resize", $.proxy( this._sizePages, this ) );
 
-      if (this.settings.keyboardNavigation) {
-        BODY.on("keydown", this._onKeydown);
+      if ( this.settings.keyboardNavigation ) {
+        BODY.on( "keydown", $.proxy( this._onKeydown, this ) );
       }
 
     },
 
-    _onDrag: function(event) {
+    _onDrag: function( event ) {
+      var gesture = event.gesture,
+          coordinates = this._overscroll( gesture.direction, gesture.deltaX, gesture.deltaY );
+
       event.stopPropagation();
-      event.preventDefault();
 
-      if (!this.preventScroll) {
-        var x = Math.round(this._overscroll(event)) || event.distanceX - this.scrollBorder.x,
-            y = Math.round(this._overscroll(event)) || event.distanceY - this.scrollBorder.y;
-
-        this._scroll(x, y);
+      if ( !this.preventScroll ) {
+        this._scroll( coordinates );
       }
 
     },
 
-    _ondragend: function(event) {
+    _onDragend: function( event ) {
+      var gestureDirection = event.gesture.direction;
+
       event.stopPropagation();
       event.preventDefault();
 
-      if (event.distance > this.settings.minTouchDistance) {
+      if ( event.gesture.distance > this.settings.minTouchDistance ) {
         if (
-            ((event.direction === "left" || event.direction === "right") && (this.settings.direction === "vertical")) ||
-            ((event.direction === "up" || event.direction === "down") && (this.settings.direction === "horizontal"))
+            ((gestureDirection === "left" || gestureDirection === "right") && (this.settings.direction === "vertical")) ||
+            ((gestureDirection === "up" || gestureDirection === "down") && (this.settings.direction === "horizontal"))
            ) {
           this._scrollToPage();
           return;
         }
-        this.swipe(event.direction);
+        this.swipe( gestureDirection );
       } else {
         this._scrollToPage();
       }
     },
 
-    _onKeydown: function(event) {
+    _onKeydown: function( event ) {
       var direction = keycodes[event.keyCode];
 
-      if (direction) {
+      if ( direction ) {
         this._scrollToPage(direction);
       }
     },
 
     setHorizontalContainerCssValues: function() {
-      $.extend(this.pageCssProperties, {
+      $.extend( this.pageCssProperties, {
         "float"     : "left",
         "overflow-y": "scroll",
         "overflow-x": "hidden",
-        "padding"   : 0
+        "padding"   : 0,
+        "display"   : "block"
       });
 
       this.pageContainer.css({
         "overflow"                   : "hidden",
         "width"                      : this.pageDimentions.width * this.pages.length,
-        "padding-right"              : this.settings.scribe,
         "box-sizing"                 : "content-box",
         "-webkit-backface-visibility": "hidden",
         "-webkit-perspective"        : 1000,
-        "margin"                     : 0
+        "margin"                     : 0,
+        "padding"                    : 0
       });
     },
 
     setVerticalContainerCssValues: function() {
-      $.extend(this.pageCssProperties, {
+      $.extend( this.pageCssProperties, {
         "overflow": "hidden",
-        "padding"   : 0
+        "padding" : 0,
+        "display" : "block"
       });
 
-      this.container.css({"height": this.pageDimentions.height + parseInt(this.settings.scribe, 10)});
       this.pageContainer.css({
-        "padding-bottom"             : this.settings.scribe,
-        "box-sizing"                 : "content-box",
-        "-webkit-backface-visibility": "hidden",
-        "-webkit-perspective"        : 1000,
-        "margin"                     : 0
+        "padding-bottom"              : this.settings.scribe,
+        "box-sizing"                  : "content-box",
+        "-webkit-backface-visibility" : "hidden",
+        "-webkit-perspective"         : 1000,
+        "margin"                      : 0
       });
     },
 
     setContainerCssValues: function(){
-      switch (this.settings.direction) {
+      switch ( this.settings.direction ) {
         case "horizontal":
           this.setHorizontalContainerCssValues();
           break;
@@ -365,7 +380,7 @@
 
       } else {
 
-        height = height - parseInt( settings.scribe, 10 );
+        height = height - parseInt( this.settings.scribe, 10 );
         this.scrollBorder.y = height * this.page;
 
       }
@@ -384,18 +399,18 @@
 
       this.setContainerCssValues();
 
-      $.extend(this.pageCssProperties, {
+      $.extend( this.pageCssProperties, {
         "height": this.pageDimentions.height,
         "width" : this.pageDimentions.width
       });
 
-      this.pages.css(this.pageCssProperties);
+      this.pages.css( this.pageCssProperties );
 
-      if (this.settings.scrollToPage) {
-        this._scrollToPage("page", this.page);
+      if ( this.settings.scrollToPage ) {
+        this._scrollToPage( "page", this.page );
         delete this.settings.scrollToPage;
       } else {
-        this._jumpToPage("page", this.page);
+        this._jumpToPage( "page", this.page );
       }
     },
 
@@ -406,30 +421,30 @@
     // Takes direction and, if specific page is used the pagenumber
 
     _calcNewPage: function(direction, pageNumber) {
-      switch (direction) {
+      switch ( direction ) {
         case "up":
-          if (this.page < this.pages.length - 1) {
+          if ( this.page < this.pages.length - 1 ) {
             this.scrollBorder.y = this.scrollBorder.y + this.pageDimentions.height;
             this.page++;
           }
           break;
 
         case "down":
-          if (this.page > 0) {
+          if ( this.page > 0 ) {
             this.scrollBorder.y = this.scrollBorder.y - this.pageDimentions.height;
             this.page--;
           }
           break;
 
         case "left":
-          if (this.page < this.pages.length - 1) {
+          if ( this.page < this.pages.length - 1 ) {
             this.scrollBorder.x = this.scrollBorder.x + this.pageDimentions.width;
             this.page++;
           }
           break;
 
         case "right":
-          if (this.page > 0) {
+          if ( this.page > 0 ) {
             this.scrollBorder.x = this.scrollBorder.x - this.pageDimentions.width;
             this.page--;
           }
@@ -454,10 +469,12 @@
 
     _onSwipeEnd: function() {
       this.preventScroll = false;
-      this.activeElement.trigger("active");
+      this.activeElement.trigger( "active" );
 
       // Call onSwipeEnd caalback function
-      if (this.settings.onSwipeEnd) this.settings.onSwipeEnd(this.container, this.activeElement, this.page);
+      if ( this.settings.onSwipeEnd ) {
+        this.settings.onSwipeEnd(this.container, this.activeElement, this.page);
+      }
     },
 
     // Jump to page
@@ -468,9 +485,15 @@
     // Takes:
     // Direction and pagenumber
 
-    _jumpToPage: function(options, pageNumber) {
-      if (options) this._calcNewPage(options, pageNumber);
-      this._scroll(- this.scrollBorder.x, - this.scrollBorder.y);
+    _jumpToPage: function( options, pageNumber ) {
+      if ( options ) {
+        this._calcNewPage( options, pageNumber );
+      }
+
+      this._scroll({
+        x: - this.scrollBorder.x,
+        y: - this.scrollBorder.y
+      });
     },
 
     // Scroll to page
@@ -481,26 +504,26 @@
     // Takes:
     // Direction and pagenumber
 
-    _scrollToPage: function(options, pageNumber) {
+    _scrollToPage: function( options, pageNumber ) {
       this.preventScroll = true;
 
-      if (options) this._calcNewPage(options, pageNumber);
+      if ( options ) this._calcNewPage( options, pageNumber );
       this._animateScroll();
     },
 
     // Public functions
     // ================
 
-    swipe: function(direction) {
-      this.activeElement = this.pages.eq(this.page);
+    swipe: function( direction ) {
+      this.activeElement = this.pages.eq( this.page );
 
       // Call onSwipeStart callback function
-      if (this.settings.onSwipeStart) this.settings.onSwipeStart(container, this.activeElement);
-      this._scrollToPage(direction);
+      if ( this.settings.onSwipeStart ) this.settings.onSwipeStart( container, this.activeElement );
+      this._scrollToPage( direction );
     },
 
-    updateInstance: function(options) {
-      if (typeof options === "object") $.extend(this.settings, options);
+    updateInstance: function( options ) {
+      if ( typeof options === "object" ) $.extend( this.settings, options );
 
       this.page = this.settings.jumpToPage || this.settings.scrollToPage || this.page;
 

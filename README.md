@@ -4,21 +4,16 @@ dragend.js, Readme File:
 
 # DESCRIPTION
 
-dragend.js is a swipe plugin for [jQuery](https://github.com/jquery/jquery/). It's uses [hammer.js](http://eightmedia.github.com/hammer.js/) for observing multi-touch gestures.
+dragend.js is a swipe plugin for [jQuery](https://github.com/jquery/jquery/). It uses [hammer.js](http://eightmedia.github.com/hammer.js/) for observing multi-touch gestures.
 
 The current version is 0.1.0.
 
 For further informations and demos check out the [demo page](http://stereobit.github.com/dragend/).
 
-# UPDATES/FEEDBACK & BUGS
-
-##Planed features
----
-
-##Known Bugs
----
-
 # CHANGELOG
+
+* 2013-04-21
+  0.1.0 release
 
 * 2012-09-9
   0.1.0 beta release
